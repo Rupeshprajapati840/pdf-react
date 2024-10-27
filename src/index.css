@@ -11,3 +11,171 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+.hidden 
+{
+display: none;
+}
+ 
+.lucide
+{
+
+  height:22px !important;
+  width: 22px !important;
+  display: inline-block;
+}
+
+#pdf-viewer {
+  width: 100%;
+ /*  height: calc(100vh - 120px);
+  overflow: auto; */
+  position: relative;
+}
+
+  #pdf-viewer canvas {
+      margin: 0 auto;
+      display: block;
+  }
+
+#signatureCanvas, #drawCanvas {
+  border: 1px solid #dee2e6;
+}
+
+.draggable {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  border: 2px solid transparent;
+  box-sizing: border-box;
+}
+
+  .draggable:hover {
+      border-color: #007bff;
+  }
+
+.page-nav {
+  width: 200px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+  .overlay > * {
+      pointer-events: auto;
+  }
+
+.resizer {
+  width: 10px;
+  height: 10px;
+  background: #007bff;
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  cursor: se-resize;
+  border-radius: 50%;
+}
+
+.toolbar {
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.input-control {
+  margin: 5px;
+  padding: 5px;
+  border: 1px solid #ced4da;
+  background-color: #fff;
+  cursor: move;
+}
+
+.annotation {
+  position: absolute;
+  background-color: rgba(255, 255, 0, 0.3);
+  border: 1px solid #ffd700;
+  min-width: 50px;
+  min-height: 20px;
+}
+
+.sidebar {
+  width: 250px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  padding: 15px;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  margin-bottom: 10px;
+  border: 1px solid #dee2e6;
+}
+
+.position-relative {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.color-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.color-option {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+  .color-option.active {
+      border-color: #007bff;
+  }
+
+.canvas-container {
+  position: relative;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+#signatureCanvas {
+  width: 400px;
+  height: 200px;
+  cursor: crosshair;
+}
+
+.font-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.font-option {
+  padding: 5px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+  .font-option.active {
+      background-color: #007bff;
+      color: white;
+  }
+
+#signaturePreview, #imagePreview {
+  min-height: 100px;
+}
+
+  #imagePreview img {
+      max-width: 100%;
+      max-height: 200px;
+  }
