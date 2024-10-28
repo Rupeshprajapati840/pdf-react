@@ -29,6 +29,8 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ 
+  scale,
+  setScale,
   handleZoomIn,
   handleZoomOut,
   handleRotateLeft,
@@ -171,8 +173,9 @@ export function Toolbar({
           onValueChange={(value) => setScale(value[0] / 100)}
         />
         <span className="text-sm">{Math.round(scale * 100)}%</span> */}
-        <Input type="range" className="form-range align-self-center" id="zoomSlider" min="50" max="200" value="100" />
-        <span className="align-self-center" id="zoomValue">100%</span>
+        <Input type="range" className="form-range align-self-center" id="zoomSlider" min="50" max="200" value={[scale * 100]}
+          onValueChange={(value:any) => setScale(value[0] / 100)} />
+        <span className="align-self-center" id="zoomValue">{Math.round(scale * 100)}%</span>
         <Button variant="dark" size="icon" id="fitWidth" title="Fit Width" ><ArrowRightLeftIcon className="h-4 w-4" /></Button>
         <Button variant="dark" size="icon" id="fitHeight"  title="Fit Height" ><ArrowUpDownIcon className="h-4 w-4" /></Button>
         <Button variant="dark" size="icon" id="rotateLeft"  title="Rotate Left"  onClick={handleRotateLeft}><RotateCcw className="h-4 w-4" /></Button>

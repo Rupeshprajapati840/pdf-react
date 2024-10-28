@@ -9,9 +9,7 @@ export interface ButtonProps extends Omit<BootstrapButtonProps, 'size'> {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size, children, ...props }, ref) => {
-
-
-    console.log("size",size)
+ 
     const sizeClass = size === 'icon' ? 'p-2' : undefined;
     const buttonSize = size === 'icon' ? undefined : size;
 

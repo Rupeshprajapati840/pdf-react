@@ -80,18 +80,26 @@ export default function SignatureModal({ addElementToOverlay }: SignatureModalPr
   const onHide = () => {
     setShowSignatureModal(false)
   }
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileInput = event.target; // Capture the input element
+    if (!fileInput || !fileInput.files) return; // Check if files are available
+  
+    const file = fileInput.files[0]; // Access the first file
+    if (file && file.type.startsWith('image/')) { // Check if the file is an image
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        // Set the result as a Data URL for image preview
+console.log(imagePreview);
+
         setImagePreview(e.target?.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file); // Use readAsDataURL for image preview
+    } else {
+      alert('Please upload a valid image file.'); // Updated alert message
     }
-  };
+  }, []);
 
+ 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     draw(e);

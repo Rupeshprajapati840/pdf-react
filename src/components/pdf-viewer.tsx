@@ -12,6 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.mjs`
 export default function PDFEditor() {
   const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null)
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);  
   const [scale, setScale] = useState(1.0)
   const [rotation, setRotation] = useState(0)
   const [pageNum, setPageNum] = useState(1)
@@ -36,100 +37,102 @@ export default function PDFEditor() {
   }, [loadInitialPDF])
 
   useEffect(() => {
-    if (pdfBytes) {
+    if (pdfBlob) {
       console.log("render pdf");
       renderPdf()
     }
-  }, [pdfBytes, scale, rotation, pageNum])
+  }, [pdfBlob, scale, rotation, pageNum])
 
   const loadPdf = async (pdfData: Uint8Array) => {
     try {
-      const pdfDoc = await PDFDocument.load(pdfData)
-      setPdfDoc(pdfDoc)
-      setPdfBytes(pdfData)
-      setPageOverlays({})
-      setNumPages(pdfDoc.getPageCount())
-      setPageNum(1)
+      const pdfBlob = new Blob([pdfData], { type: 'application/pdf' });
+      setPdfBlob(pdfBlob);
+      const pdfDoc = await PDFDocument.load(pdfData);
+      setPdfDoc(pdfDoc);
+      setPageOverlays({});
+      setNumPages(pdfDoc.getPageCount());
+      setPageNum(1);
     } catch (error) {
-      console.error('Error loading PDF:', error)
+      console.error('Error loading PDF:', error);
     }
-  }
-
+  };
+  
   const renderPdf = async () => {
-    if (!pdfBytes || !pdfViewerRef.current) return
-
+    if (!pdfBlob || !pdfViewerRef.current) return;
+  
     try {
-      // Create a copy of the pdfBytes to prevent detachment issues
-      const pdfData = new Uint8Array(pdfBytes.slice(0));
-      const pdf = await pdfjs.getDocument({ data: pdfData }).promise
-      const page = await pdf.getPage(pageNum)
-
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const pdf = await pdfjs.getDocument({ url: pdfUrl }).promise;
+      const page = await pdf.getPage(pageNum);
+  
       const originalViewport = page.getViewport({ scale: 1, rotation });
-
+  
       // Calculate the scale to fit the page width to the container
       const containerWidth = pdfViewerRef.current.clientWidth;
       const scale = containerWidth / originalViewport.width;
-
-
-      const viewport = page.getViewport({ scale, rotation })
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-
-      canvas.height = viewport.height
-      canvas.width = viewport.width
+  
+      const viewport = page.getViewport({ scale, rotation });
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+  
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
       canvas.style.width = '100%';
       canvas.style.height = 'auto';
-
-
+  
       if (context) {
         const renderContext = {
           canvasContext: context,
           viewport: viewport,
-        }
-        await page.render(renderContext).promise
+        };
+        await page.render(renderContext).promise;
       }
-
-      pdfViewerRef.current.innerHTML = ''
-      pdfViewerRef.current.appendChild(canvas)
-
+  
+      pdfViewerRef.current.innerHTML = '';
+      pdfViewerRef.current.appendChild(canvas);
+  
       if (!pageOverlays[pageNum]) {
-        const overlay = document.createElement('div')
-        overlay.className = 'overlay'
-        overlay.id = `overlay_${pageNum}`
-        overlay.style.position = 'absolute'
-        overlay.style.top = '0'
-        overlay.style.left = '0'
-        overlay.style.width = `${canvas.width}px`
-        overlay.style.height = `${canvas.height}px`
-        pdfViewerRef.current.appendChild(overlay)
-        setPageOverlays((prevOverlays) => ({ ...prevOverlays, [pageNum]: overlay }))
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        overlay.id = `overlay_${pageNum}`;
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = `${canvas.width}px`;
+        overlay.style.height = `${canvas.height}px`;
+        pdfViewerRef.current.appendChild(overlay);
+        setPageOverlays((prevOverlays) => ({ ...prevOverlays, [pageNum]: overlay }));
       }
+  
+      // Revoke the object URL after rendering
+      URL.revokeObjectURL(pdfUrl);
     } catch (error) {
-      console.error('Error rendering PDF:', error)
+      console.error('Error rendering PDF:', error);
     }
-  }
-
+  };
+  
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      const reader = new FileReader();
+      reader.onload = async (e: ProgressEvent<FileReader>) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer.slice(0)); // Copy the buffer immediately
+        await loadPdf(uint8Array);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert('Please upload a valid PDF file.');
+    }
+  }, []);
+  
   const handleZoomIn = useCallback(() => setScale(prevScale => Math.min(prevScale + 0.1, 2)), [])
   const handleZoomOut = useCallback(() => setScale(prevScale => Math.max(prevScale - 0.1, 0.5)), [])
   const handleRotateLeft = useCallback(() => setRotation(prevRotation => (prevRotation - 90 + 360) % 360), [])
   const handleRotateRight = useCallback(() => setRotation(prevRotation => (prevRotation + 90) % 360), [])
   const handlePrevPage = useCallback(() => setPageNum(prevPageNum => Math.max(prevPageNum - 1, 1)), [])
   const handleNextPage = useCallback(() => setPageNum(prevPageNum => Math.min(prevPageNum + 1, numPages)), [numPages])
-
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && file.type === 'application/pdf') {
-      const reader = new FileReader()
-      reader.onload = async (e: ProgressEvent<FileReader>) => {
-        const arrayBuffer = e.target?.result as ArrayBuffer
-        const uint8Array = new Uint8Array(arrayBuffer)
-        await loadPdf(uint8Array)
-      }
-      reader.readAsArrayBuffer(file)
-    } else {
-      alert('Please upload a valid PDF file.')
-    }
-  }, [])
+ 
 
 
   const convertImageToPng = useCallback((imgElement: HTMLImageElement): Promise<Blob> => {
@@ -310,9 +313,8 @@ export default function PDFEditor() {
   }, [getJsonData]);
 
   const handlePrint = useCallback(() => {
-    if (pdfBytes) {
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
+    if (pdfBlob) { 
+      const url = URL.createObjectURL(pdfBlob)
       const windowContent = `<iframe width='100%' height='100%' src='${url}'></iframe>`
       const printWindow = window.open('', '', 'width=800,height=600')
       if (printWindow) {
@@ -322,7 +324,7 @@ export default function PDFEditor() {
         printWindow.print()
       }
     }
-  }, [pdfBytes])
+  }, [pdfBlob])
 
   return (
     <div className="container-fluid min-h-screen flex flex-col">
@@ -345,7 +347,7 @@ export default function PDFEditor() {
         pageOverlays={pageOverlays}
       />
       <div className="row flex-grow-1">
-        <Sidebar numPages={numPages} onPageClick={setPageNum} pdfBytes={pdfBytes} />
+        <Sidebar numPages={numPages} onPageClick={setPageNum} pdfBlob={pdfBlob} />
         <PDFViewer pdfViewerRef={pdfViewerRef} />
         <div className="col-auto p-0">
           <div className="sidebar">

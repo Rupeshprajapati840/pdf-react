@@ -4,17 +4,18 @@ import * as pdfjsLib from 'pdfjs-dist';
 interface SidebarProps {
   numPages: number;
   onPageClick: (pageNum: number) => void;
-  pdfBytes: ArrayBuffer | null;
+  pdfBlob: Blob | null;
 }
 
-export default function Sidebar({ numPages, onPageClick, pdfBytes }: SidebarProps) {
+export default function Sidebar({ numPages, onPageClick, pdfBlob }: SidebarProps) {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
 
   const generateThumbnails = useCallback(async () => {
-    if (!pdfBytes) return;
+    if (!pdfBlob) return;
     try {
-      const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-      //const newThumbnails = [];
+      const arrayBuffer = await pdfBlob.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const newThumbnails = [];
 
       for (let i = 1; i <= numPages; i++) {
         const page = await pdf.getPage(i);
@@ -27,14 +28,14 @@ export default function Sidebar({ numPages, onPageClick, pdfBytes }: SidebarProp
         canvas.width = viewport.width;
 
         await page.render({ canvasContext: context, viewport }).promise;
-       // newThumbnails.push(canvas.toDataURL());
+        newThumbnails.push(canvas.toDataURL());
       }
 
-     // setThumbnails(newThumbnails);
+      setThumbnails(newThumbnails);
     } catch (error) {
       console.error('Error generating PDF thumbnails:', error);
     }
-  }, [pdfBytes, numPages]);
+  }, [pdfBlob, numPages]);
 
   useEffect(() => {
     generateThumbnails();
