@@ -3,22 +3,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { PDFDocument, rgb } from 'pdf-lib'
 import * as pdfjs from 'pdfjs-dist'
-import { Toolbar } from '../components/Toolbar'
-import Sidebar from '../components/Sidebar'
-import PDFViewer from '../components/PDFViewer'
+import Toolbar from './Toolbar'
+import Sidebar from './Sidebar'
+import PDFViewer from './PDFViewer' 
+import interact from 'interactjs'; 
 
 pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.mjs`;
 
 export default function PDFEditor() {
-  const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null)
-  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
+  const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null) 
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);  
   const [scale, setScale] = useState(1.0)
   const [rotation, setRotation] = useState(0)
   const [pageNum, setPageNum] = useState(1)
   const [numPages, setNumPages] = useState(0)
-  const [pageOverlays, setPageOverlays] = useState<{ [key: number]: HTMLDivElement }>({})
-
+  const [pageOverlays, setPageOverlays] = useState<{ [key: number]: HTMLDivElement }>([])
+  const [jsonData, setJsonData] = useState<any[]>([]);
   const pdfViewerRef = useRef<HTMLDivElement>(null)
 
   const loadInitialPDF = useCallback(async () => {
@@ -37,8 +37,7 @@ export default function PDFEditor() {
   }, [loadInitialPDF])
 
   useEffect(() => {
-    if (pdfBlob) {
-      console.log("render pdf");
+    if (pdfBlob) { 
       renderPdf()
     }
   }, [pdfBlob, scale, rotation, pageNum])
@@ -49,7 +48,7 @@ export default function PDFEditor() {
       setPdfBlob(pdfBlob);
       const pdfDoc = await PDFDocument.load(pdfData);
       setPdfDoc(pdfDoc);
-      setPageOverlays({});
+      setPageOverlays([]);
       setNumPages(pdfDoc.getPageCount());
       setPageNum(1);
     } catch (error) {
@@ -64,7 +63,7 @@ export default function PDFEditor() {
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const pdf = await pdfjs.getDocument({ url: pdfUrl }).promise;
       const page = await pdf.getPage(pageNum);
-  
+        
       const originalViewport = page.getViewport({ scale: 1, rotation });
   
       // Calculate the scale to fit the page width to the container
@@ -103,7 +102,10 @@ export default function PDFEditor() {
         pdfViewerRef.current.appendChild(overlay);
         setPageOverlays((prevOverlays) => ({ ...prevOverlays, [pageNum]: overlay }));
       }
-  
+      else{
+        pdfViewerRef.current.appendChild(pageOverlays[pageNum]);
+      }
+   
       // Revoke the object URL after rendering
       URL.revokeObjectURL(pdfUrl);
     } catch (error) {
@@ -118,6 +120,7 @@ export default function PDFEditor() {
       reader.onload = async (e: ProgressEvent<FileReader>) => {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         const uint8Array = new Uint8Array(arrayBuffer.slice(0)); // Copy the buffer immediately
+        setPageNum(0);
         await loadPdf(uint8Array);
       };
       reader.readAsArrayBuffer(file);
@@ -133,7 +136,67 @@ export default function PDFEditor() {
   const handlePrevPage = useCallback(() => setPageNum(prevPageNum => Math.max(prevPageNum - 1, 1)), [])
   const handleNextPage = useCallback(() => setPageNum(prevPageNum => Math.min(prevPageNum + 1, numPages)), [numPages])
  
+  const makeElementDraggable = useCallback((element: HTMLElement) => {
+    interact(element)
+      .draggable({
+        inertia: true,
+        modifiers: [
+          interact.modifiers.restrictRect({
+            restriction: 'parent',
+            endOnly: true
+          })
+        ],
+        listeners: {
+          move: dragMoveListener,
+        }
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+        listeners: {
+          move: resizeMoveListener,
+        }
+      });
+  }, []);
 
+  const dragMoveListener = (event: Interact.DragEvent) => {
+    const target = event.target as HTMLElement;
+    const x = (parseFloat(target.getAttribute('data-x') || '0') || 0) + event.dx;
+    const y = (parseFloat(target.getAttribute('data-y') || '0') || 0) + event.dy;
+
+    target.style.transform = `translate(${x}px, ${y}px)`;
+
+    target.setAttribute('data-x', x.toString());
+    target.setAttribute('data-y', y.toString());
+  };
+
+  const resizeMoveListener = (event: Interact.ResizeEvent) => {
+    const target = event.target as HTMLElement;
+    let x = (parseFloat(target.getAttribute('data-x') || '0') || 0);
+    let y = (parseFloat(target.getAttribute('data-y') || '0') || 0);
+
+    target.style.width = `${event.rect.width}px`;
+    target.style.height = `${event.rect.height}px`;
+
+      // Check if event.deltaRect exists before accessing its properties
+      if (event.deltaRect) {
+        x += event.deltaRect.left;
+        y += event.deltaRect.top;
+      }
+
+    target.style.transform = `translate(${x}px, ${y}px)`;
+
+    target.setAttribute('data-x', x.toString());
+    target.setAttribute('data-y', y.toString());
+  };
+
+  const addElementToOverlay = useCallback((element: HTMLElement) => {
+    if (pageOverlays[pageNum]) {
+      pageOverlays[pageNum].appendChild(element);
+      makeElementDraggable(element);
+    }
+  }, [pageNum, pageOverlays, makeElementDraggable]);
+
+    
 
   const convertImageToPng = useCallback((imgElement: HTMLImageElement): Promise<Blob> => {
     return new Promise((resolve) => {
@@ -200,8 +263,8 @@ export default function PDFEditor() {
           }
         }
 
-        const modifiedPdfBytes = await pdfDoc.save();
-        const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
+        const PdfBytes = await pdfDoc.save();
+        const blob = new Blob([PdfBytes], { type: 'application/pdf' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = "modified.pdf";
@@ -220,7 +283,7 @@ export default function PDFEditor() {
       // });
     }
 
-  }, [pdfBytes, pageOverlays, convertImageToPng]);
+  }, [pdfBlob, pageOverlays, convertImageToPng]);
 
 
   const getJsonData = useCallback(async () => {
@@ -287,7 +350,7 @@ export default function PDFEditor() {
   const handleGetJson = useCallback(async () => {
     try {
       const jsonData = await getJsonData();
-      console.log(JSON.stringify(jsonData, null, 2));
+      const jsonString = JSON.stringify(jsonData, null, 2); 
 
       // const response = await fetch('/api/save-form', {
       //   method: 'POST',
@@ -302,6 +365,17 @@ export default function PDFEditor() {
       //   title: "Success",
       //   description: "Form data saved successfully",
       // });
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'data.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+
     } catch (error) {
       console.error('Error:', error);
       // toast({
@@ -344,7 +418,9 @@ export default function PDFEditor() {
         handlePrevPage={handlePrevPage}
         handleNextPage={handleNextPage}
         setPageNum={setPageNum}
+        setJsonData={setJsonData}
         pageOverlays={pageOverlays}
+        addElementToOverlay={addElementToOverlay}
       />
       <div className="row flex-grow-1">
         <Sidebar numPages={numPages} onPageClick={setPageNum} pdfBlob={pdfBlob} />

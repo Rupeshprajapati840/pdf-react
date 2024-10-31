@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react' 
-import { Button } from "../components/ui/button"
-import { PencilIcon } from 'lucide-react'
-import { Modal } from 'react-bootstrap';
+import { Modal,Form, Button } from 'react-bootstrap';
+import { PencilIcon } from 'lucide-react' 
 
 interface DrawModalProps {  
   addElementToOverlay: (element: HTMLElement) => void;
@@ -78,7 +77,7 @@ export default function DrawModal({ addElementToOverlay}: DrawModalProps) {
 
   return (
     <>
-      <Button variant="dark" size="icon" id="drawBtn" title="Draw" onClick={() => setShowDrawModal(true)}><PencilIcon className="h-4 w-4" /> Draw</Button>
+      <Button variant="dark"  id="drawBtn" title="Draw" onClick={() => setShowDrawModal(true)}><PencilIcon className="h-4 w-4" /> Draw</Button>
       <Modal show={showDrawModal}  onHide={onHide}>
         <Modal.Header closeButton>
           <Modal.Title>Drawing</Modal.Title>

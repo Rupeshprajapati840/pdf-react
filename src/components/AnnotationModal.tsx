@@ -1,9 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
-import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
-import { SquareSquare } from 'lucide-react';
-import { Modal } from 'react-bootstrap';
+import React, { useState, useCallback } from 'react'; 
+import { Modal,Form, Button } from 'react-bootstrap'; 
+import { SquareSquare } from 'lucide-react'; 
 
 interface AnnotationModalProps {
   addElementToOverlay: (element: HTMLElement) => void;
@@ -40,13 +37,14 @@ export default function AnnotationModal({ addElementToOverlay }: AnnotationModal
 
   return (
     <>
-   <Button variant="dark" size="icon" id="annotationBtn" title="Annotation" onClick={() => setShowAnnotationModal(true)}><SquareSquare className="h-4 w-4" /> Annotate</Button>
+   <Button variant="dark"  id="annotationBtn" title="Annotation" onClick={() => setShowAnnotationModal(true)}><SquareSquare className="h-4 w-4" /> Annotate</Button>
     <Modal show={showAnnotationModal}  onHide={onHide}>
       <Modal.Header closeButton>
         <Modal.Title>Drawing</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-      <Textarea
+      <Form.Control
+       as="textarea"
           placeholder="Enter your annotation"
           value={annotationText}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setAnnotationText(e.target.value)}

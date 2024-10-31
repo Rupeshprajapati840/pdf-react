@@ -1,10 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Tabs, TabItem } from "../components/ui/tabs";
-import { SignatureIcon } from 'lucide-react';
-import { Modal } from 'react-bootstrap';
+import { Form, Button, Tabs, Tab } from 'react-bootstrap';
 
+import { SignatureIcon, Trash2Icon } from 'lucide-react';
+import { Modal } from 'react-bootstrap';
 
 interface SignatureModalProps {
   addElementToOverlay: (element: HTMLElement) => void;
@@ -14,7 +12,7 @@ export default function SignatureModal({ addElementToOverlay }: SignatureModalPr
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [activeTab, setActiveTab] = useState('draw');
   const [signatureText, setSignatureText] = useState('');
-  const [currentFont, setCurrentFont] = useState('Arial');
+  const [currentFont, setCurrentFont] = useState('Caveat'); // Default font
   const [currentColor, setCurrentColor] = useState('#000000');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -35,7 +33,6 @@ export default function SignatureModal({ addElementToOverlay }: SignatureModalPr
 
   const handleSaveSignature = () => {
     let signatureDataUrl: string | undefined;
-
     if (activeTab === 'draw') {
       signatureDataUrl = signatureCanvasRef.current?.toDataURL('image/png');
     } else if (activeTab === 'type') {
@@ -51,8 +48,8 @@ export default function SignatureModal({ addElementToOverlay }: SignatureModalPr
         tempCtx.fillText(signatureText, tempCanvas.width / 2, tempCanvas.height / 2);
         signatureDataUrl = tempCanvas.toDataURL('image/png');
       }
-    } else if (activeTab === 'image') {
-      signatureDataUrl = imagePreview || undefined;
+    } else if (activeTab === 'image' && imagePreview) {
+      signatureDataUrl = imagePreview; 
     }
 
     if (signatureDataUrl) {
@@ -78,34 +75,27 @@ export default function SignatureModal({ addElementToOverlay }: SignatureModalPr
   };
 
   const onHide = () => {
-    setShowSignatureModal(false)
-  }
+    setShowSignatureModal(false);
+  };
+
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileInput = event.target; // Capture the input element
-    if (!fileInput || !fileInput.files) return; // Check if files are available
-  
-    const file = fileInput.files[0]; // Access the first file
-    if (file && file.type.startsWith('image/')) { // Check if the file is an image
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e: ProgressEvent<FileReader>) => {
-        // Set the result as a Data URL for image preview
-console.log(imagePreview);
-
         setImagePreview(e.target?.result as string);
       };
-      reader.readAsDataURL(file); // Use readAsDataURL for image preview
+      reader.readAsDataURL(file);
     } else {
-      alert('Please upload a valid image file.'); // Updated alert message
+      alert('Please upload a valid image file.');
     }
   }, []);
 
- 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     draw(e);
   };
 
-  
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const canvas = signatureCanvasRef.current;
@@ -127,106 +117,191 @@ console.log(imagePreview);
     }
   };
 
-  // Define the tab items for the Tabs component
-  const tabItems: TabItem[] = [
-    {
-      key: 'draw',
-      title: 'Draw',
-      content: (
-        <div>
-          <canvas
-            ref={signatureCanvasRef}
-            width={400}
-            height={200}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseOut={stopDrawing}
-            className="border border-gray-300"
-          />
-          <Input
-            type="color"
-            value={currentColor}
-            onChange={(value:any) => setCurrentColor(value)}
-            className="mt-2"
-          />
-        </div>
-      ),
-    },
-    {
-      key: 'image',
-      title: 'Image',
-      content: (
-        <div>
-          <Input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageUpload}
-            accept="image/*"
-            className="mb-2"
-          />
-          {imagePreview && (
-            <img src={imagePreview} alt="Signature preview" className="max-w-full h-auto" />
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'type',
-      title: 'Type',
-      content: (
-        <div>
-        <Input
-          type="text"
-          value={signatureText}
-          onChange={(value:any) => setSignatureText(value)}
-          placeholder="Type your signature"
-          className="mb-2"
-        />
-        {/* <Select
-          value={currentFont}
-          onValueChange={setCurrentFont}
-          className="mb-2"
-        >
-          <Select.Option value="Arial">Arial</Select.Option>
-          <Select.Option value="Times New Roman">Times New Roman</Select.Option>
-          <Select.Option value="Courier">Courier</Select.Option>
-        </Select> */}
-        <Input
-          type="color"
-          value={currentColor}
-          onChange={(value:any) => setCurrentColor(value)}
-        />
-      </div>
-      ),
-    },
+  const clearDrawing = () => {
+    const canvas = signatureCanvasRef.current;
+    if (canvas) {
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  };
 
-  ];
+  const clearImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
+  const clearText = () => {
+    setSignatureText('');
+  };
+  const handleSelect = (key: string | null) => {
+    if (key) {
+      setActiveTab(key); // Only update if key is not null
+    }
+  };
 
-
-
+  const handleColorClick = (color: string) => {
+    setCurrentColor(color); // Set the current color to the clicked button's data-color
+  };
+  const handleFontClick = (font: string) => {
+    setCurrentFont(font); // Set the current font to the clicked button's data-font
+  };
   return (
     <>
-      <Button variant="dark" size="icon" id="signatureBtn" title="Signature" onClick={() => setShowSignatureModal(true)}><SignatureIcon className="h-4 w-4" /> Signature</Button>
+      <Button variant="dark" onClick={() => setShowSignatureModal(true)}>
+        <SignatureIcon className="h-4 w-4 mr-2" /> Signature
+      </Button>
       <Modal show={showSignatureModal} onHide={onHide}>
         <Modal.Header closeButton>
-          <Modal.Title>Drawing</Modal.Title>
+          <Modal.Title>Signature</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Tabs items={tabItems} defaultActiveKey="draw" />
+          <Tabs defaultActiveKey="draw" activeKey={activeTab} id="uncontrolled-tab-example" className="mb-3" onSelect={handleSelect} >
+            <Tab eventKey="draw" title="Draw">
+              <div className='text-center'>
+
+                <canvas
+                  ref={signatureCanvasRef}
+                  width={465}
+                  height={250}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseOut={stopDrawing}
+                  className="border border-gray-300"
+                />
+                <div className="mt-2 flex justify-between items-center">
+                  <div className="color-selector mb-3">
+                    <button
+                      className={`color-option ${currentColor === '#000000' ? 'active' : ''}`}
+                      data-color="#000000"
+                      style={{ backgroundColor: '#000000' }}
+                      onClick={() => handleColorClick('#000000')}
+                    ></button>
+                    <button
+                      className={`color-option ${currentColor === '#2293fb' ? 'active' : ''}`}
+                      data-color="#2293fb"
+                      style={{ backgroundColor: '#2293fb' }}
+                      onClick={() => handleColorClick('#2293fb')}
+                    ></button>
+                    <button
+                      className={`color-option ${currentColor === '#4636e3' ? 'active' : ''}`}
+                      data-color="#4636e3"
+                      style={{ backgroundColor: '#4636e3' }}
+                      onClick={() => handleColorClick('#4636e3')}
+                    ></button>
+                  </div>
+                  <Button onClick={clearDrawing} variant="danger" size="sm">
+                    <Trash2Icon className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </Tab>
+            <Tab eventKey="image" title="Image">
+              <div>
+                <Form.Control
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="mb-2"
+                />
+                {imagePreview && (
+                  <div className="relative text-center">
+                    <img src={imagePreview} alt="Signature preview" style={{ maxWidth: '200px' }} className="max-w-full h-auto" />
+                    <br /> <Button onClick={clearImage} variant="danger" size="sm" className="mt-2">
+                      <Trash2Icon className="h-4 w-4 mr-2" />
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Tab>
+            <Tab eventKey="type" title="Type">
+              <div className='text-center'>
+
+                <Form.Control
+                  type="text"
+                  value={signatureText}
+                  onChange={(e) => setSignatureText(e.target.value)}
+                  placeholder="Type your signature"
+                  className="mb-2"
+                /> 
+
+                <div className="font-selector mb-3">
+                  <button
+                    className={`font-option ${currentFont === 'Caveat' ? 'active' : ''}`}
+                    style={{ fontFamily: 'Caveat' }}
+                    data-font="Caveat"
+                    onClick={() => handleFontClick('Caveat')}  
+                  >
+                    Signature
+                  </button>
+                  <button
+                    className={`font-option ${currentFont === 'Pacifico' ? 'active' : ''}`}
+                    style={{ fontFamily: 'Pacifico' }}
+                    data-font="Pacifico"
+                    onClick={() => handleFontClick('Pacifico')}  
+                  >
+                    Signature
+                  </button>
+                  <button
+                    className={`font-option ${currentFont === 'Marck Script' ? 'active' : ''}`}
+                    style={{ fontFamily: 'Marck Script' }}
+                    data-font="Marck Script"
+                    onClick={() => handleFontClick('Marck Script')}  
+                  >
+                    Signature
+                  </button>
+                  <button
+                    className={`font-option ${currentFont === 'Meddon' ? 'active' : ''}`}
+                    style={{ fontFamily: 'Meddon' }}
+                    data-font="Meddon"
+                    onClick={() => handleFontClick('Meddon')} 
+                  >
+                    Signature
+                  </button>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="color-selector mb-3">
+                    <button
+                      className={`color-option ${currentColor === '#000000' ? 'active' : ''}`}
+                      data-color="#000000"
+                      style={{ backgroundColor: '#000000' }}
+                      onClick={() => handleColorClick('#000000')}
+                    ></button>
+                    <button
+                      className={`color-option ${currentColor === '#2293fb' ? 'active' : ''}`}
+                      data-color="#2293fb"
+                      style={{ backgroundColor: '#2293fb' }}
+                      onClick={() => handleColorClick('#2293fb')}
+                    ></button>
+                    <button
+                      className={`color-option ${currentColor === '#4636e3' ? 'active' : ''}`}
+                      data-color="#4636e3"
+                      style={{ backgroundColor: '#4636e3' }}
+                      onClick={() => handleColorClick('#4636e3')}
+                    ></button>
+                  </div>
+                  <Button onClick={clearText} variant="danger" size="sm">
+                    <Trash2Icon className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </Tab>
+          </Tabs>
         </Modal.Body>
         <Modal.Footer>
-         {/*  <Button variant="secondary" onClick={handleClear}>
-            Clear
-          </Button> */}
-        <Button variant="primary" onClick={handleSaveSignature}>
-          Save
-        </Button>
-      </Modal.Footer>
-    </Modal >
+          <Button variant="dark" onClick={handleSaveSignature}>
+            Save
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
-
- 
   );
 }

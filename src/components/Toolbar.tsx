@@ -1,13 +1,10 @@
 import React, { useCallback, useRef } from 'react'
-import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
-import interact from 'interactjs';
-import { Slider } from "../components/ui/slider"
+import { Form, Button } from 'react-bootstrap';
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Download, Printer, Upload, ChevronLeft, ChevronRight,PencilIcon,
   SignatureIcon,TypeIcon, TextCursorInputIcon,ImageIcon,HighlighterIcon,SquareSquare,ArrowRightLeftIcon,ArrowUpDownIcon } from 'lucide-react'
 import SignatureModal from './SignatureModal'
-import DrawModal from './DrawModal'
-import AnnotationModal from './AnnotationModal'
+import DrawModal from  '../components/DrawModal'
+import AnnotationModal from '../components/AnnotationModal'
 
 interface ToolbarProps {
   scale: number
@@ -25,10 +22,13 @@ interface ToolbarProps {
   handlePrevPage: () => void
   handleNextPage: () => void
   setPageNum: (pageNum: number) => void
+  setJsonData: (json: any[]) => void
   pageOverlays: { [key: number]: HTMLDivElement };
+  addElementToOverlay:(element: HTMLElement) => void
+  
 }
 
-export function Toolbar({ 
+export default function Toolbar({ 
   scale,
   setScale,
   handleZoomIn,
@@ -44,7 +44,9 @@ export function Toolbar({
   handlePrevPage,
   handleNextPage,
   setPageNum,
-  pageOverlays
+  pageOverlays,
+  setJsonData,
+  addElementToOverlay
 }: ToolbarProps) {
 
 
@@ -97,93 +99,46 @@ export function Toolbar({
     addElementToOverlay(input);
   };
 
-  const makeElementDraggable = useCallback((element: HTMLElement) => {
-    interact(element)
-      .draggable({
-        inertia: true,
-        modifiers: [
-          interact.modifiers.restrictRect({
-            restriction: 'parent',
-            endOnly: true
-          })
-        ],
-        listeners: {
-          move: dragMoveListener,
-        }
-      })
-      .resizable({
-        edges: { left: true, right: true, bottom: true, top: true },
-        listeners: {
-          move: resizeMoveListener,
-        }
-      });
-  }, []);
 
-  const dragMoveListener = (event: Interact.DragEvent) => {
-    const target = event.target as HTMLElement;
-    const x = (parseFloat(target.getAttribute('data-x') || '0') || 0) + event.dx;
-    const y = (parseFloat(target.getAttribute('data-y') || '0') || 0) + event.dy;
-
-    target.style.transform = `translate(${x}px, ${y}px)`;
-
-    target.setAttribute('data-x', x.toString());
-    target.setAttribute('data-y', y.toString());
-  };
-
-  const resizeMoveListener = (event: Interact.ResizeEvent) => {
-    const target = event.target as HTMLElement;
-    let x = (parseFloat(target.getAttribute('data-x') || '0') || 0);
-    let y = (parseFloat(target.getAttribute('data-y') || '0') || 0);
-
-    target.style.width = `${event.rect.width}px`;
-    target.style.height = `${event.rect.height}px`;
-
-      // Check if event.deltaRect exists before accessing its properties
-      if (event.deltaRect) {
-        x += event.deltaRect.left;
-        y += event.deltaRect.top;
+  const readFile = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as any;
+          setJsonData(content);
+          console.log('File content:', JSON.parse(content));
+        };
+        reader.readAsText(file);
       }
-
-    target.style.transform = `translate(${x}px, ${y}px)`;
-
-    target.setAttribute('data-x', x.toString());
-    target.setAttribute('data-y', y.toString());
-  };
-
-  const addElementToOverlay = useCallback((element: HTMLElement) => {
-    if (pageOverlays[pageNum]) {
-      pageOverlays[pageNum].appendChild(element);
-      makeElementDraggable(element);
-    }
-  }, [pageNum, pageOverlays, makeElementDraggable]);
-
-    
+    };
+    input.click();
+  }, []);
+ 
 
   return (
     <div className="row toolbar">
       <div className="col d-flex flex-wrap gap-2 align-items-center">
         <Button variant="dark" id="zoomIn" title="Zoom Out" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
-        <Button variant="dark" id="zoomOut" title="Zoom In" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
-        {/* <Slider
-          className="w-24"
-          min={50}
-          max={200}
-          step={1}
-          value={[scale * 100]}
-          onValueChange={(value) => setScale(value[0] / 100)}
-        />
-        <span className="text-sm">{Math.round(scale * 100)}%</span> */}
-        <Input type="range" className="form-range align-self-center" id="zoomSlider" min="50" max="200" value={[scale * 100]}
-          onValueChange={(value:any) => setScale(value[0] / 100)} />
-        <span className="align-self-center" id="zoomValue">{Math.round(scale * 100)}%</span>
-        <Button variant="dark" size="icon" id="fitWidth" title="Fit Width" ><ArrowRightLeftIcon className="h-4 w-4" /></Button>
-        <Button variant="dark" size="icon" id="fitHeight"  title="Fit Height" ><ArrowUpDownIcon className="h-4 w-4" /></Button>
-        <Button variant="dark" size="icon" id="rotateLeft"  title="Rotate Left"  onClick={handleRotateLeft}><RotateCcw className="h-4 w-4" /></Button>
-        <Button variant="dark" size="icon" id="rotateRight"  title="Roatate Right"  onClick={handleRotateRight}><RotateCw className="h-4 w-4" /></Button>
+        <Button variant="dark" id="zoomOut" title="Zoom In" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button> 
+        <Form.Control type="range" className="form-range" id="zoomSlider" min="50" max="200" value={(scale * 100).toString()} 
+          onChange={(e) => setScale(parseInt(e.target.value) / 100)} style={{ width: '180px' }}  /> 
+        <span className="align-self-center" style={{width:'50px'}} id="zoomValue">{Math.round(scale * 100)}%</span>
+
+
+
+        <Button variant="dark"   id="fitWidth" title="Fit Width" ><ArrowRightLeftIcon className="h-4 w-4" /></Button>
+        <Button variant="dark"   id="fitHeight"  title="Fit Height" ><ArrowUpDownIcon className="h-4 w-4" /></Button>
+        <Button variant="dark"   id="rotateLeft"  title="Rotate Left"  onClick={handleRotateLeft}><RotateCcw className="h-4 w-4" /></Button>
+        <Button variant="dark"   id="rotateRight"  title="Roatate Right"  onClick={handleRotateRight}><RotateCw className="h-4 w-4" /></Button>
         <SignatureModal addElementToOverlay={addElementToOverlay} /> 
-        <Button variant="dark" size="icon" id="textBtn" title="Text" onClick={handleAddText}><TypeIcon className="h-4 w-4" /> Text</Button> 
+        <Button variant="dark"id="textBtn" title="Text" onClick={handleAddText}><TypeIcon className="h-4 w-4" /> Text</Button> 
         <DrawModal addElementToOverlay={addElementToOverlay} />
-        <Button variant="dark" size="icon" id="imageBtn" title="Image" onClick={() => imageInputRef.current?.click()}><ImageIcon className="h-4 w-4" /> Image</Button>
+        <Button variant="dark"id="imageBtn" title="Image" onClick={() => imageInputRef.current?.click()}><ImageIcon className="h-4 w-4" /> Image</Button>
         <input
         type="file"
         ref={imageInputRef}
@@ -191,12 +146,13 @@ export function Toolbar({
         accept="image/*" 
         onChange={handleImageUpload}
       />
-        <Button variant="dark" size="icon" id="highlightBtn" title="Highlight"><HighlighterIcon className="h-4 w-4" /> Highlight</Button>    
+        <Button variant="dark" id="highlightBtn" title="Highlight"><HighlighterIcon className="h-4 w-4" /> Highlight</Button>    
         <AnnotationModal addElementToOverlay={addElementToOverlay}  />
-        <Button variant="dark" size="icon" id="inputBtn" title="Input" onClick={handleAddInput}><TextCursorInputIcon className="h-4 w-4" />Input</Button>
-        <Button variant="dark" size="icon" id="downloadBtn" title="Download" onClick={handleDownload}><Download className="h-4 w-4" /> Download</Button>
-        <Button variant="dark" size="icon" id="printBtn" title="Print" onClick={handlePrint}><Printer className="h-4 w-4" /> Print</Button>
-        <Button variant="dark" size="icon" id="getJsonBtn" title="GET Json" onClick={handleGetJson}>Get JSON</Button>
+        <Button variant="dark" id="inputBtn" title="Input" onClick={handleAddInput}><TextCursorInputIcon className="h-4 w-4" />Input</Button>
+        <Button variant="dark" id="downloadBtn" title="Download" onClick={handleDownload}><Download className="h-4 w-4" /> Download</Button>
+        <Button variant="dark" id="printBtn" title="Print" onClick={handlePrint}><Printer className="h-4 w-4" /> Print</Button>
+        <Button variant="dark" id="getJsonBtn" title="GET Json" onClick={handleGetJson}>Get JSON</Button>
+        <Button onClick={readFile}>Read JSON File</Button>
         <input
           type="file"
           ref={fileInputRef}
@@ -206,20 +162,19 @@ export function Toolbar({
         />
         <Button variant="dark" onClick={() => fileInputRef.current?.click()}>
           <Upload className="h-4 w-4 mr-2" />Upload PDF
-        </Button>
-
+        </Button> 
         <div className="page-nav d-flex align-items-center ms-auto">
-          <Button variant="dark" size="icon" onClick={handlePrevPage}><ChevronLeft className="h-4 w-4" /></Button>
-          <div className="mt-3 d-flex">
-            <Input
+          <Button variant="dark" onClick={handlePrevPage}><ChevronLeft className="h-4 w-4" /></Button>
+          <div className=" d-flex">
+            <Form.Control
               type="number"
               value={pageNum}
-              onChange={(value:any) => setPageNum(Math.max(1, Math.min(Number(value), numPages)))}
+              onChange={(e) => setPageNum(Math.max(1, Math.min(Number(e.target.value), numPages)))}
               className="ms-2 text-center me-2"
             />
             <span className="w-100 text-sm p-1" >/ {numPages}</span>
           </div>
-          <Button variant="dark" size="icon" onClick={handleNextPage}><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="dark" onClick={handleNextPage}><ChevronRight className="h-4 w-4" /></Button>
         </div>
       </div>
     </div>)
