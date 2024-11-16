@@ -21,11 +21,9 @@ interface ToolbarProps {
   numPages: number
   handlePrevPage: () => void
   handleNextPage: () => void
-  setPageNum: (pageNum: number) => void
-  setJsonData: (json: any[]) => void
-  pageOverlays: { [key: number]: HTMLDivElement };
+  setPageNum: (pageNum: number) => void 
   addElementToOverlay:(element: HTMLElement) => void
-  
+  handleReadFile:() => void
 }
 
 export default function Toolbar({ 
@@ -43,10 +41,9 @@ export default function Toolbar({
   numPages,
   handlePrevPage,
   handleNextPage,
-  setPageNum,
-  pageOverlays,
-  setJsonData,
-  addElementToOverlay
+  setPageNum, 
+  addElementToOverlay,
+  handleReadFile
 }: ToolbarProps) {
 
 
@@ -98,26 +95,6 @@ export default function Toolbar({
     input.style.width = '150px';
     addElementToOverlay(input);
   };
-
-
-  const readFile = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const content = e.target?.result as any;
-          setJsonData(content);
-          console.log('File content:', JSON.parse(content));
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  }, []);
  
 
   return (
@@ -152,7 +129,7 @@ export default function Toolbar({
         <Button variant="dark" id="downloadBtn" title="Download" onClick={handleDownload}><Download className="h-4 w-4" /> Download</Button>
         <Button variant="dark" id="printBtn" title="Print" onClick={handlePrint}><Printer className="h-4 w-4" /> Print</Button>
         <Button variant="dark" id="getJsonBtn" title="GET Json" onClick={handleGetJson}>Get JSON</Button>
-        <Button onClick={readFile}>Read JSON File</Button>
+        
         <input
           type="file"
           ref={fileInputRef}
@@ -163,6 +140,7 @@ export default function Toolbar({
         <Button variant="dark" onClick={() => fileInputRef.current?.click()}>
           <Upload className="h-4 w-4 mr-2" />Upload PDF
         </Button> 
+        <Button variant="dark" id="readJsonBtn" title="GET Json" onClick={handleReadFile }>Read JSON File</Button>
         <div className="page-nav d-flex align-items-center ms-auto">
           <Button variant="dark" onClick={handlePrevPage}><ChevronLeft className="h-4 w-4" /></Button>
           <div className=" d-flex">

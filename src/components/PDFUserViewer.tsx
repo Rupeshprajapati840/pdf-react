@@ -6,7 +6,7 @@ import * as pdfjs from 'pdfjs-dist'
 import interact from 'interactjs';
 import Toolbar from './Toolbar'
 import Sidebar from './Sidebar'
-import PDFViewer from './PDFViewer'
+import PDFViewer from './PDFViewer' 
 
 pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.mjs`;
 
@@ -17,10 +17,9 @@ export default function PDFUserViewer() {
   const [rotation, setRotation] = useState(0)
   const [pageNum, setPageNum] = useState(1)
   const [numPages, setNumPages] = useState(0)
-  const [jsonData, setJsonData] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [jsonData, setJsonData] = useState<any[]>([]); 
   const [pageOverlays, setPageOverlays] = useState<{ [key: number]: HTMLDivElement }>([])
-  const jsonDataRef = useRef(jsonData); // Store jsonData in a ref
+
   const pdfViewerRef = useRef<HTMLDivElement>(null)
 
   const loadInitialPDF = useCallback(async () => {
@@ -47,11 +46,16 @@ export default function PDFUserViewer() {
 
   
   useEffect(() => {
-    jsonDataRef.current = jsonData;
-  }, [jsonData]);
+    if (pdfViewerRef.current) { 
+      const existingOverlays = pdfViewerRef.current.querySelectorAll('.overlay')
+      existingOverlays.forEach(overlay => overlay.remove()) 
+      Object.values(pageOverlays).forEach(overlay => {
+        pdfViewerRef.current?.appendChild(overlay)
+      })
+    }
+  }, [pageOverlays])
 
-  
-
+   
   const loadPdf = async (pdfData: Uint8Array) => {
     try {
       const pdfBlob = new Blob([pdfData], { type: 'application/pdf' });
@@ -296,29 +300,29 @@ export default function PDFUserViewer() {
   }, [pdfBlob, pageOverlays, convertImageToPng]);
 
 
-  const convertJSONToOverlays = useCallback(() => { 
-    if (!pdfDoc) return; 
-    jsonDataRef.current.forEach((item) => {
-      if (!pageOverlays[item.page]) {
+  const convertJSONToOverlays = useCallback((jsonContent: any[]) => {
+    const newOverlays = { ...pageOverlays }
+    jsonContent.forEach((item) => {
+      const pageNum = parseInt(item.page)
+      if (!newOverlays[pageNum]) {
         const overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        overlay.id = `overlay_${item.page}`;
+        overlay.className = 'overlay'
+        overlay.id = `overlay_${pageNum}`;
         overlay.style.position = 'absolute';
         overlay.style.top = '0';
         overlay.style.left = '0';
         overlay.style.width = '100%';
         overlay.style.height = '100%';
-        overlay.style.pointerEvents = 'none'; 
-        setPageOverlays((prevOverlays) => ({ ...prevOverlays, [pageNum]: overlay }));
-      }    
-      const element = createElementFromJSON(item);
-      if (element) { 
-        console.log(element);
-        addElementToOverlay(element) 
+        overlay.style.pointerEvents = 'none';
+        newOverlays[pageNum] = overlay
+      }
+      const element = createElementFromJSON(item)
+      if (element) {
+        newOverlays[pageNum].appendChild(element)
       }
     });
- 
-  }, [pdfDoc,pageOverlays]);
+    setPageOverlays(newOverlays)
+  }, [pageOverlays])
 
   const createElementFromJSON = (item: any): HTMLElement | null => {
     let element: HTMLElement | null = null;
@@ -355,7 +359,7 @@ export default function PDFUserViewer() {
     return element;
   };
 
-
+  
 
   const getJsonData = useCallback(async () => {
     const jsonData = [];
@@ -459,6 +463,30 @@ export default function PDFUserViewer() {
     }
   }, [pdfBlob])
 
+  const handleReadFile = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const content = e.target?.result as string
+          try {
+            const jsonContent = JSON.parse(content)
+            convertJSONToOverlays(jsonContent)
+            console.log('File content:', jsonContent)
+          } catch (error) {
+            console.error('Error parsing JSON:', error)
+          }
+        }
+        reader.readAsText(file)
+      }
+    }
+    input.click()
+  }, [])
+
   return (
     <div className="container-fluid min-h-screen flex flex-col">
       <Toolbar
@@ -476,11 +504,10 @@ export default function PDFUserViewer() {
         numPages={numPages}
         handlePrevPage={handlePrevPage}
         handleNextPage={handleNextPage}
-        setPageNum={setPageNum}
-        setJsonData={setJsonData}
-        pageOverlays={pageOverlays}
+        setPageNum={setPageNum} 
         addElementToOverlay={addElementToOverlay}
-      />
+        handleReadFile={handleReadFile}
+      /> 
       <div className="row flex-grow-1">
         <Sidebar numPages={numPages} onPageClick={setPageNum} pdfBlob={pdfBlob} />
         <PDFViewer pdfViewerRef={pdfViewerRef} />

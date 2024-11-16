@@ -399,6 +399,10 @@ export default function PDFEditor() {
       }
     }
   }, [pdfBlob])
+  
+  const handleReadFile = useCallback(() => { 
+  }, [])
+
 
   return (
     <div className="container-fluid min-h-screen flex flex-col">
@@ -417,10 +421,9 @@ export default function PDFEditor() {
         numPages={numPages}
         handlePrevPage={handlePrevPage}
         handleNextPage={handleNextPage}
-        setPageNum={setPageNum}
-        setJsonData={setJsonData}
-        pageOverlays={pageOverlays}
-        addElementToOverlay={addElementToOverlay}
+        setPageNum={setPageNum} 
+        handleReadFile={handleReadFile}
+        addElementToOverlay={addElementToOverlay}      
       />
       <div className="row flex-grow-1">
         <Sidebar numPages={numPages} onPageClick={setPageNum} pdfBlob={pdfBlob} />
